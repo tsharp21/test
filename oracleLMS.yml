@@ -1,0 +1,51 @@
+---
+- name: Runs the oracle LMS tool and collects the files
+  hosts: "{{ server }}"
+  vars:
+    server:
+  tasks:
+    - name: Copies the CEILMS.tar file to server
+      unarchive:
+        src: CEILMS.tar
+        dest: /opt
+        owner: root
+        group: root
+        mode: 0744
+        creates: /opt/LMSCollection
+      tags: copy
+
+    - name: Run the collection script
+      command: ./LMSCollection.sh -d / -p all -o /tmp/LMSReview  -L Y
+      args:
+        chdir: /opt/LMSCollection/bin
+      tags: run
+
+    - name: Collect the name of the file to copy to central location
+      find:
+        paths: /tmp/LMSReview
+        patterns: "*bz2"
+        recurse: no
+      register: result
+      tags: collect,run
+
+    - name: Debug the filename list
+      debug:
+        msg: "{{ item.path }}" 
+        verbosity: 2
+      with_items: "{{ result.files }}"
+
+    - name: Collect the output file to centralized location
+      fetch:
+        src: "{{ item.path }}"
+        dest: /ansible/output/LMS/
+        flat: yes
+      with_items: "{{ result.files }}"
+      notify: delete_file
+      tags: collect,run
+
+  handlers:
+    - name: delete_file
+      file:
+        path: /tmp/LMSReview
+        state: absent
+
