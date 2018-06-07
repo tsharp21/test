@@ -1,0 +1,20 @@
+---
+- name:  Adds the btpam user to the wheel group and makes sure wheel group has sudo access
+  hosts: "{{ server }}"
+  vars:
+    server:
+  tasks:
+
+    - name: Verifies wheel entry in /etc/sudoers
+      lineinfile:
+        path: /etc/sudoers
+        state: present
+        regexp: '^%wheel\s'
+        line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+        validate: '/usr/sbin/visudo -cf %s'
+      
+    - name: Adds btpam user to the wheel group
+      user:
+        name: btpam
+        groups: wheel
+        append: yes
